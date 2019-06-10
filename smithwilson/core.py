@@ -68,8 +68,8 @@ def wilson_function(t1: np.ndarray, t2: np.ndarray, alpha: float, ufr: float) ->
     # This is achieved by repeating the vectors along the axis 1. The operation is required
     # because the Wilson function needs all possible combinations of maturities to construct
     # the Wilson matrix
-    m =  max(len(t1), len(t2))
-    n = min(len(t1), len(t2))
+    m = len(t1)
+    n = len(t2)
     t1_Mat = np.repeat(t1, n, axis=1)
     t2_Mat = np.repeat(t2, m, axis=1).T
 
