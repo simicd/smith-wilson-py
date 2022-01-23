@@ -44,26 +44,30 @@ This Python package implements the Smith-Wilson yield curve fitting algorithm. I
 1. Call the Smiwth-Wilson fitting algorithm. This returns the rates as numpy vector with each element corresponding to the maturity in `terms_target`
    ```py
    # Calculate fitted rates based on actual observations and two parametes alpha & UFR
-   rates_ext = sw.fit_smithwilson_rates(rates_obs=rates, t_obs=terms,
-                                        t_target=terms_target, alpha=alpha, ufr=ufr)
+   fitted_rates = sw.fit_smithwilson_rates(rates_obs=rates, t_obs=terms,
+                                           t_target=terms_target, alpha=alpha, ufr=ufr)
    ```
 
 1. To display the results and/or processing them it can be useful to turn them into a table, here using the pandas library:
    ```py
+   # Ensure pandas package is imported
    import pandas as pd
 
-   # Create dictionary with maturity as key and rate as value
-   observed = dict(zip(terms, rates))
-   extrapolated = dict(zip(terms_target, rates_ext.flatten()))
-   # Create and print dataframe
-   print(pd.DataFrame({"Observed": observed, "Extrapolated": extrapolated}))
+   # ...
+
+   # Turn inputs & outputs into dataframe
+   observed_df = pd.DataFrame(data=rates, index=terms, columns=["observed"])
+   extrapolated_df = pd.DataFrame(data=fitted_rates, index=terms_target, columns=["extrapolated"])
+
+   # Combine and print dataframe
+   print(observed_df.join(extrapolated_df, how="outer"))
    ```
 
 A complete example can be found in [main.py](https://github.com/simicd/smith-wilson-py/blob/master/main.py)
 <br /><br />
 
 ## Algorithm
-The algorithm is fully vectorized and uses numpy, making it very performant. All functions are in [core.py](https://github.com/simicd/smith-wilson-py/blob/master/smithwilson/core.py).
+The algorithm is fully vectorized and uses numpy, making it very performant. The code is in [core.py](https://github.com/simicd/smith-wilson-py/blob/master/smithwilson/core.py).
 
 The function `fit_smithwilson_rates()` expects following parameters:
 - Observed rates

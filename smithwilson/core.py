@@ -1,8 +1,9 @@
-
-from math import exp, log
+from math import log
 import numpy as np
+from typing import Union, List
 
-def calculate_prices(rates: np.ndarray, t: np.ndarray) -> np.ndarray:
+
+def calculate_prices(rates: Union[np.ndarray, List[float]], t: Union[np.ndarray, List[float]]) -> np.ndarray:
     """Calculate prices from zero-coupon rates
 
     Args:
@@ -13,10 +14,14 @@ def calculate_prices(rates: np.ndarray, t: np.ndarray) -> np.ndarray:
         Prices as vector of length n
     """
 
+    # Convert list into numpy array
+    rates = np.array(rates)
+    t = np.array(t)
+
     return np.power(1 + rates, -t)
 
 
-def ufr_discount_factor(ufr: float, t: np.ndarray) -> np.ndarray:
+def ufr_discount_factor(ufr: float, t: Union[np.ndarray, List[float]]) -> np.ndarray:
     """Calculate Ultimate Forward Rate (UFR) discount factors.
 
     Takes the UFR with a vector of maturities and returns for each of the
@@ -37,10 +42,14 @@ def ufr_discount_factor(ufr: float, t: np.ndarray) -> np.ndarray:
 
     # Convert annualized ultimate forward rate to log-return
     ufr = log(1 + ufr)
+
+    # Convert list into numpy array
+    t = np.array(t)
+
     return np.exp(-ufr * t)
 
 
-def wilson_function(t1: np.ndarray, t2: np.ndarray, alpha: float, ufr: float) -> np.ndarray:
+def wilson_function(t1: Union[np.ndarray, List[float]], t2: Union[np.ndarray, List[float]], alpha: float, ufr: float) -> np.ndarray:
     """Calculate matrix of Wilson functions
 
     The Smith-Wilson method requires the calculation of a series of Wilson
@@ -85,7 +94,7 @@ def wilson_function(t1: np.ndarray, t2: np.ndarray, alpha: float, ufr: float) ->
     return W
 
 
-def fit_parameters(rates: np.ndarray, t: np.ndarray, alpha: float, ufr: float) -> np.ndarray:
+def fit_parameters(rates: Union[np.ndarray, List[float]], t: Union[np.ndarray, List[float]], alpha: float, ufr: float) -> np.ndarray:
     """Calculate Smith-Wilson parameter vector ζ
 
     Given the Wilson-matrix, vector of discount factors and prices,
@@ -115,13 +124,13 @@ def fit_parameters(rates: np.ndarray, t: np.ndarray, alpha: float, ufr: float) -
     # Calculate vector of parameters (p. 17)
     # To invert the Wilson-matrix, conversion to type matrix is required
     zeta = np.matrix(W).I * (mu - P)
-    zeta = np.array(zeta) # Convert back to more general array type
+    zeta = np.array(zeta)     # Convert back to more general array type
 
     return zeta
 
 
-def fit_smithwilson_rates(rates_obs: np.ndarray, t_obs: np.ndarray, t_target: np.ndarray,
-                                alpha: float, ufr: float) -> np.ndarray:
+def fit_smithwilson_rates(rates_obs: Union[np.ndarray, List[float]], t_obs: Union[np.ndarray, List[float]],
+                          t_target: Union[np.ndarray, List[float]], alpha: float, ufr: float) -> np.ndarray:
     """Calculate zero-coupon yields with Smith-Wilson method based on observed rates.
 
     This function expects the rates and initial maturity vector to be
@@ -170,7 +179,7 @@ def fit_smithwilson_rates(rates_obs: np.ndarray, t_obs: np.ndarray, t_target: np
 
     # Price vector - equivalent to discounting with zero-coupon yields 1/(1 + r)^t
     # for prices where t_obs = t_target. All other matuirites are interpolated or extrapolated
-    P = ufr_disc - W @ zeta  # '@' in numpy is the dot product of two matrices
+    P = ufr_disc - W @ zeta     # '@' in numpy is the dot product of two matrices
 
     # Transform price vector to zero-coupon rate vector (1/P)^(1/t) - 1
-    return np.power(1/P, 1/t_target) - 1
+    return np.power(1 / P, 1 / t_target) - 1
