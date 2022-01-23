@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="smithwilson",
-    version="0.1.0",
+    version="0.2.0",
     author="Dejan Simic",
     author_email="dejan.simic",
     description="Implementation of the Smith-Wilson yield curve fitting algorithm in Python for interpolations and extrapolations of zero-coupon bond rates",
