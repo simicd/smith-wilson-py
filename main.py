@@ -14,16 +14,16 @@ ufr = 0.029
 alpha = 0.128562
 
 # Target - Extrapolate to 150 years
-terms_ext = [float(y + 1) for y in range(150)] # 1.0, 2.0, ..., 150.0
+terms_target = [float(y + 1) for y in range(150)] # 1.0, 2.0, ..., 150.0
 
 # Calculate fitted rates based on actual observations and two parametes alpha & UFR
 rates_ext = sw.fit_smithwilson_rates(rates_obs=rates, t_obs=terms,
-                                     t_target=terms_ext, alpha=alpha, ufr=ufr)
+                                     t_target=terms_target, alpha=alpha, ufr=ufr)
 
 # Display Outputs
 # Create dictionary with maturity as key and rate as value
 observed = dict(zip(terms, rates))
-extrapolated = dict(zip(terms_ext, rates_ext.flatten()))
+extrapolated = dict(zip(terms_target, rates_ext.flatten()))
 
 # Create and print dataframe
 print(pd.DataFrame({"Observed": observed, "Extrapolated": extrapolated}))
