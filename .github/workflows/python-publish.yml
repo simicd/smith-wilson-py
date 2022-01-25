@@ -31,6 +31,13 @@ jobs:
         pip install build
     - name: Build package
       run: python -m build
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: dist
+        path: |
+          dist/**/*.tar.gz
+          dist/**/*.whl
     # - name: Publish package
     #   uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
     #   with:
