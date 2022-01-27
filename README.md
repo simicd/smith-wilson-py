@@ -1,4 +1,4 @@
-# README
+# smithwilson
 ## Overview
 This Python package implements the Smith-Wilson yield curve fitting algorithm. It allows for interpolations and extrapolations of zero-coupon bond rates. This algorithm is used for the extrapolation of [EIOPA risk-free term structures](https://eiopa.europa.eu/Publications/Standards/Technical%20Documentation%20(31%20Jan%202018).pdf) in the Solvency II framework. Details are available in the Technical Paper [QIS 5  Risk-free interest rates](https://eiopa.europa.eu/Publications/QIS/ceiops-paper-extrapolation-risk-free-rates_en-20100802.pdf). Examples of extrapolated yield curves including the parameters applied can be found [here](https://eiopa.europa.eu/Publications/Standards/EIOPA_RFR_20190531.zip).
 <br /><br />
@@ -83,16 +83,16 @@ contain any set of maturities (e.g. more granular maturity structure (interpolat
 
 The Smith-Wilson fitting algorithm calculates first the Wilson-matrix (EIOPA, 2010, p. 16):
 
-    `W = e^(-UFR * (t1 + t2)) * (α * min(t1, t2) - 0.5 * e^(-α * max(t1, t2))
-        * (e^(α * min(t1, t2)) - e^(-α * min(t1, t2))))`
+    W = e^(-UFR * (t1 + t2)) * (α * min(t1, t2) - 0.5 * e^(-α * max(t1, t2))
+        * (e^(α * min(t1, t2)) - e^(-α * min(t1, t2))))
 
 Given the Wilson-matrix `W`, vector of UFR discount factors `μ` and prices `P`, the parameter vector `ζ` can be calculated as follows (EIOPA, 2010, p.17):
 
-    `ζ = W^-1 * (μ - P)`
+    ζ = W^-1 * (μ - P)
 
 With the Smith-Wilson parameter `ζ` and Wilson-matrix `W`, the zero-coupon bond prices can be represented as (EIOPA, 2010, p. 18) in matrix notation:
 
-    `P = e^(-t * UFR) - W * ζ`
+    P = e^(-t * UFR) - W * ζ
 
 In the last case, `t` can be any maturity vector, i.e. with additional maturities to extrapolate rates.
 <br /><br />
