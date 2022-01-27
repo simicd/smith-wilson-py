@@ -28,7 +28,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install build
+        pip install build twine
     - name: Build package
       run: python -m build
     - name: Archive production artifacts
@@ -38,8 +38,11 @@ jobs:
         path: |
           dist/**/*.tar.gz
           dist/**/*.whl
-    # - name: Publish package
-    #   uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
-    #   with:
-    #     user: __token__
-    #     password: ${{ secrets.PYPI_API_TOKEN }}
+    - name: Test publishing
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+      run: |
+        twine upload -r testpypi dist/*
+
+    # twine upload dist/*
