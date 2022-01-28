@@ -183,3 +183,43 @@ def fit_smithwilson_rates(rates_obs: Union[np.ndarray, List[float]], t_obs: Unio
 
     # Transform price vector to zero-coupon rate vector (1/P)^(1/t) - 1
     return np.power(1 / P, 1 / t_target) - 1
+
+
+def fit_convergence_parameter(rates_obs: Union[np.ndarray, List[float]],
+                              t_obs: Union[np.ndarray, List[float]],
+                              ufr: float) -> float:
+    """Calculate zero-coupon yields with Smith-Wilson method based on observed rates.
+
+    This function expects the rates and initial maturity vector to be
+    before the Last Liquid Point (LLP). The targeted maturity vector can
+    contain both, more granular maturity structure (interpolation) or terms after
+    the LLP (extrapolation).
+
+    The Smith-Wilson method calculated first the Wilson-matrix (p. 16):
+        W = e^(-UFR * (t1 + t2)) * (α * min(t1, t2) - 0.5 * e^(-α * max(t1, t2))
+            * (e^(α * min(t1, t2)) - e^(-α * min(t1, t2))))
+
+    Given the Wilson-matrix, vector of discount factors and prices,
+    the parameter vector can be calculated as follows (p.17):
+        ζ = W^-1 * (μ - P)
+
+    With the Smith-Wilson parameter and Wilson-matrix, the zero-coupon bond
+    prices can be represented as (p. 18) in matrix notation:
+        P = e^(-t * UFR) - W * zeta
+
+    In the last case, t can be any maturity vector
+
+    Source: EIOPA QIS 5 Technical Paper; Risk-free interest rates – Extrapolation method; p.11ff
+    https://eiopa.europa.eu/Publications/QIS/ceiops-paper-extrapolation-risk-free-rates_en-20100802.pdf
+
+    Args:
+        rates_obs: Initially observed zero-coupon rates vector before LLP of length n
+        t_obs: Initially observed time to maturity vector (in years) of length n
+        t_target: New targeted maturity vector (in years) with interpolated/extrapolated terms
+        ufr: Ultimate Forward Rate (annualized/annual compounding)
+
+    Returns:
+        Vector of zero-coupon rates with Smith-Wilson interpolated or extrapolated rates
+    """
+
+    return 0.0

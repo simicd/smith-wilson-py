@@ -210,3 +210,31 @@ class TestSmithWilson(unittest.TestCase):
         self.assertEqual(type(actual), type(expected), "Returned types not matching")
         self.assertTupleEqual(actual.shape, expected.shape, "Shapes not matching")
         np.testing.assert_almost_equal(actual, expected, decimal=8, err_msg="Fitted rates not matching")
+
+
+
+    def test_fit_alpha(self):
+        """Test estimation of yield curve fitted with the Smith-Wilson algorithm.
+           This example uses an actual example from EIOPA. Deviations must be less than 1bps (0.01%).
+           Source: https://eiopa.europa.eu/Publications/Standards/EIOPA_RFR_20190531.zip
+                   EIOPA_RFR_20190531_Term_Structures.xlsx; Tab: RFR_spot_no_VA; Switzerland
+        """
+
+        # Input
+        r = np.array([-0.00803, -0.00814, -0.00778, -0.00725, -0.00652,
+                      -0.00565, -0.0048, -0.00391, -0.00313, -0.00214,
+                      -0.0014, -0.00067, -0.00008, 0.00051, 0.00108,
+                      0.00157, 0.00197, 0.00228, 0.0025, 0.00264,
+                      0.00271, 0.00274, 0.0028, 0.00291, 0.00309]).reshape((-1, 1))
+        t = np.array([float(y + 1) for y in range(len(r))]).reshape((-1, 1)) # 1.0, 2.0, ..., 25.0
+        ufr = 0.029
+
+        # Expected Output
+        alpha_expected = 0.128562
+
+        # Actual Output
+        alpha_actual = sw.fit_convergence_parameter(rates_obs=r, t_obs=t, ufr=ufr)
+
+        # Assert - Precision of 4 decimal points equals deviatino of less than 1bps
+        self.assertEqual(type(alpha_actual), type(alpha_expected), "Returned types not matching")
+        self.assertAlmostEqual(alpha_actual, alpha_expected, msg="Alpha not matching")
