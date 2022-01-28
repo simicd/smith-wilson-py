@@ -198,21 +198,17 @@ def fit_convergence_parameter(rates_obs: Union[np.ndarray, List[float]],
         rates = fit_smithwilson_rates(rates_obs=rates_obs,             # Input rates to be fitted
                                       t_obs=t_obs,                     # Maturities of these rates
                                       t_target=[convergence_t, convergence_t + 1],    # Maturity at which curve is supposed to converge to UFR
-                                      alpha=alpha,                     # The only parameter that will change during optimization
-                                      ufr=ufr)                         # Input
+                                      alpha=alpha,                     # Optimization parameter
+                                      ufr=ufr)                         # Ultimate forward rate
 
-        # Since t_target is only one maturity the rates will be a vector with just one element - get the first one
+        # Calculate the forward rate at convergence maturity
         forward_rate = (1 + rates[1])**(convergence_t + 1)/ (1 + rates[0])**(convergence_t) - 1
-
-        # scipy's root finding algorithm tries to vary inputs such that the output converges to zero
-        # Hence express the result as fitted rate minus UFR which should be zero (or <0.00001) at the convergence maturity max(llp + 40, 60)
 
         return (forward_rate - ufr) * 10000 + 1
 
-    # Pass minimization function into scipy's optimize
-    # a & b are the bisection intervals within which alpha will be searched (0.05 is the minimum specified in the documentation)
+    # Optimize using scipy's minimization function
+    # a & b are the bisection intervals within which alpha will be searched (0.05 is the minimum specified in the EIOPA documentation)
     # xtol governs the precision at which iterations will stop
     root = optimize.bisect(minimize, a=0.05, b=0.5, xtol=0.00001)
-
 
     return root
