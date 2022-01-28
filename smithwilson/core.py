@@ -1,5 +1,6 @@
 from math import log
 import numpy as np
+from scipy import optimize
 from typing import Union, List
 
 
@@ -187,39 +188,31 @@ def fit_smithwilson_rates(rates_obs: Union[np.ndarray, List[float]], t_obs: Unio
 
 def fit_convergence_parameter(rates_obs: Union[np.ndarray, List[float]],
                               t_obs: Union[np.ndarray, List[float]],
+                              llp: float,
                               ufr: float) -> float:
-    """Calculate zero-coupon yields with Smith-Wilson method based on observed rates.
-
-    This function expects the rates and initial maturity vector to be
-    before the Last Liquid Point (LLP). The targeted maturity vector can
-    contain both, more granular maturity structure (interpolation) or terms after
-    the LLP (extrapolation).
-
-    The Smith-Wilson method calculated first the Wilson-matrix (p. 16):
-        W = e^(-UFR * (t1 + t2)) * (α * min(t1, t2) - 0.5 * e^(-α * max(t1, t2))
-            * (e^(α * min(t1, t2)) - e^(-α * min(t1, t2))))
-
-    Given the Wilson-matrix, vector of discount factors and prices,
-    the parameter vector can be calculated as follows (p.17):
-        ζ = W^-1 * (μ - P)
-
-    With the Smith-Wilson parameter and Wilson-matrix, the zero-coupon bond
-    prices can be represented as (p. 18) in matrix notation:
-        P = e^(-t * UFR) - W * zeta
-
-    In the last case, t can be any maturity vector
-
-    Source: EIOPA QIS 5 Technical Paper; Risk-free interest rates – Extrapolation method; p.11ff
-    https://eiopa.europa.eu/Publications/QIS/ceiops-paper-extrapolation-risk-free-rates_en-20100802.pdf
-
-    Args:
-        rates_obs: Initially observed zero-coupon rates vector before LLP of length n
-        t_obs: Initially observed time to maturity vector (in years) of length n
-        t_target: New targeted maturity vector (in years) with interpolated/extrapolated terms
-        ufr: Ultimate Forward Rate (annualized/annual compounding)
-
-    Returns:
-        Vector of zero-coupon rates with Smith-Wilson interpolated or extrapolated rates
+    """
     """
 
-    return 0.0
+    def minimize(alpha: float):
+        convergence_t = max(llp + 40, 60)
+        rates = fit_smithwilson_rates(rates_obs=rates_obs,             # Input rates to be fitted
+                                      t_obs=t_obs,                     # Maturities of these rates
+                                      t_target=[convergence_t, convergence_t + 1],    # Maturity at which curve is supposed to converge to UFR
+                                      alpha=alpha,                     # The only parameter that will change during optimization
+                                      ufr=ufr)                         # Input
+
+        # Since t_target is only one maturity the rates will be a vector with just one element - get the first one
+        forward_rate = (1 + rates[1])**(convergence_t + 1)/ (1 + rates[0])**(convergence_t) - 1
+
+        # scipy's root finding algorithm tries to vary inputs such that the output converges to zero
+        # Hence express the result as fitted rate minus UFR which should be zero (or <0.00001) at the convergence maturity max(llp + 40, 60)
+
+        return (forward_rate - ufr) * 10000 + 1
+
+    # Pass minimization function into scipy's optimize
+    # a & b are the bisection intervals within which alpha will be searched (0.05 is the minimum specified in the documentation)
+    # xtol governs the precision at which iterations will stop
+    root = optimize.bisect(minimize, a=0.05, b=0.5, xtol=0.00001)
+
+
+    return root
