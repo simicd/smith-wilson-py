@@ -234,8 +234,8 @@ class TestSmithWilson(unittest.TestCase):
         alpha_expected = 0.128562
 
         # Actual Output
-        alpha_actual = sw.fit_convergence_parameter(rates_obs=r, t_obs=t, ufr=ufr, llp=llp)
+        alpha_actual = sw.fit_convergence_parameter(rates_obs=r, t_obs=t, ufr=ufr)
 
         # Assert - Precision of 4 decimal points equals deviatino of less than 1bps
         self.assertEqual(type(alpha_actual), type(alpha_expected), "Returned types not matching")
-        self.assertAlmostEqual(alpha_actual, alpha_expected, msg="Alpha not matching", places=6)
+        self.assertAlmostEqual(alpha_actual, alpha_expected, msg="Alpha not matching", delta=0.001)

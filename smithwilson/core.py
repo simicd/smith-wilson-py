@@ -188,27 +188,46 @@ def fit_smithwilson_rates(rates_obs: Union[np.ndarray, List[float]], t_obs: Unio
 
 def fit_convergence_parameter(rates_obs: Union[np.ndarray, List[float]],
                               t_obs: Union[np.ndarray, List[float]],
-                              llp: float,
                               ufr: float) -> float:
-    """
+    """Fit Smith-Wilson convergence factor (alpha).
+
+    Args:
+        rates_obs: Initially observed zero-coupon rates vector before LLP of length n
+        t_obs: Initially observed time to maturity vector (in years) of length n
+        ufr: Ultimate Forward Rate (annualized/annual compounding)
+
+    Returns:
+        Convergence parameter alpha
     """
 
-    def minimize(alpha: float):
-        convergence_t = max(llp + 40, 60)
+    # Last liquid point (LLP)
+    llp = np.max(t_obs)
+
+    # Maturity at which forward curve is supposed to converge to ultimate forward rate (UFR)
+    # See: https://www.eiopa.europa.eu/sites/default/files/risk_free_interest_rate/12092019-technical_documentation.pdf (chapter 7.D., p. 39)
+    convergence_t = max(llp + 40, 60)
+
+    # Optimization function calculating the difference between UFR and forward rate at convergence point
+    def forward_difference(alpha: float):
+
+        # Fit yield curve
         rates = fit_smithwilson_rates(rates_obs=rates_obs,             # Input rates to be fitted
                                       t_obs=t_obs,                     # Maturities of these rates
                                       t_target=[convergence_t, convergence_t + 1],    # Maturity at which curve is supposed to converge to UFR
                                       alpha=alpha,                     # Optimization parameter
                                       ufr=ufr)                         # Ultimate forward rate
 
-        # Calculate the forward rate at convergence maturity
+        # Calculate the forward rate at convergence maturity - this is an approximation since
+        # according to the documentation the minimization should be based on the forward intensity, not forward rate
         forward_rate = (1 + rates[1])**(convergence_t + 1)/ (1 + rates[0])**(convergence_t) - 1
 
-        return (forward_rate - ufr) * 10000 + 1
+        # Absolute difference needs to be smaller than 1 bps
+        return -abs(forward_rate - ufr) + 1/10000
 
-    # Optimize using scipy's minimization function
-    # a & b are the bisection intervals within which alpha will be searched (0.05 is the minimum specified in the EIOPA documentation)
-    # xtol governs the precision at which iterations will stop
-    root = optimize.bisect(minimize, a=0.05, b=0.5, xtol=0.00001)
+    # Minimize alpha w.r.t. forward difference criterion
+    # root = optimize.bisect(minimize, a=0.05, b=0.5, xtol=0.00001)
+    root = optimize.minimize(lambda alpha: alpha, 0.1, method='SLSQP', bounds=[[0.05, 1.0]],
+                             constraints=[ {'type':'ineq', 'fun': lambda alpha: forward_difference(alpha)}],
+                             options={'ftol': 1e-10, 'disp': True})
 
-    return root
+    return float(root.x)
