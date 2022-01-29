@@ -1,7 +1,7 @@
 from math import log
 import numpy as np
 from scipy import optimize
-from typing import Union, List
+from typing import Union, List, Optional
 
 
 def calculate_prices(rates: Union[np.ndarray, List[float]], t: Union[np.ndarray, List[float]]) -> np.ndarray:
@@ -131,7 +131,7 @@ def fit_parameters(rates: Union[np.ndarray, List[float]], t: Union[np.ndarray, L
 
 
 def fit_smithwilson_rates(rates_obs: Union[np.ndarray, List[float]], t_obs: Union[np.ndarray, List[float]],
-                          t_target: Union[np.ndarray, List[float]], alpha: float, ufr: float) -> np.ndarray:
+                          t_target: Union[np.ndarray, List[float]], ufr: float, alpha: Optional[float] = None) -> np.ndarray:
     """Calculate zero-coupon yields with Smith-Wilson method based on observed rates.
 
     This function expects the rates and initial maturity vector to be
@@ -160,8 +160,9 @@ def fit_smithwilson_rates(rates_obs: Union[np.ndarray, List[float]], t_obs: Unio
         rates_obs: Initially observed zero-coupon rates vector before LLP of length n
         t_obs: Initially observed time to maturity vector (in years) of length n
         t_target: New targeted maturity vector (in years) with interpolated/extrapolated terms
-        alpha: Convergence speed parameter
         ufr: Ultimate Forward Rate (annualized/annual compounding)
+        alpha: (optional) Convergence speed parameter. If not provided estimated using
+            the `fit_convergence_parameter()` function
 
     Returns:
         Vector of zero-coupon rates with Smith-Wilson interpolated or extrapolated rates
@@ -173,6 +174,9 @@ def fit_smithwilson_rates(rates_obs: Union[np.ndarray, List[float]], t_obs: Unio
     rates_obs = np.array(rates_obs).reshape((-1, 1))
     t_obs = np.array(t_obs).reshape((-1, 1))
     t_target = np.array(t_target).reshape((-1, 1))
+
+    if alpha is None:
+        alpha = fit_convergence_parameter(rates_obs=rates_obs, t_obs=t_obs, ufr=ufr)
 
     zeta = fit_parameters(rates=rates_obs, t=t_obs, alpha=alpha, ufr=ufr)
     ufr_disc = ufr_discount_factor(ufr=ufr, t=t_target)
