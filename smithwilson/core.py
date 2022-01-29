@@ -50,7 +50,9 @@ def ufr_discount_factor(ufr: float, t: Union[np.ndarray, List[float]]) -> np.nda
     return np.exp(-ufr * t)
 
 
-def wilson_function(t1: Union[np.ndarray, List[float]], t2: Union[np.ndarray, List[float]], alpha: float, ufr: float) -> np.ndarray:
+def wilson_function(t1: Union[np.ndarray, List[float]],
+                    t2: Union[np.ndarray, List[float]],
+                    alpha: float, ufr: float) -> np.ndarray:
     """Calculate matrix of Wilson functions
 
     The Smith-Wilson method requires the calculation of a series of Wilson
@@ -95,7 +97,9 @@ def wilson_function(t1: Union[np.ndarray, List[float]], t2: Union[np.ndarray, Li
     return W
 
 
-def fit_parameters(rates: Union[np.ndarray, List[float]], t: Union[np.ndarray, List[float]], alpha: float, ufr: float) -> np.ndarray:
+def fit_parameters(rates: Union[np.ndarray, List[float]],
+                   t: Union[np.ndarray, List[float]],
+                   alpha: float, ufr: float) -> np.ndarray:
     """Calculate Smith-Wilson parameter vector ζ
 
     Given the Wilson-matrix, vector of discount factors and prices,
@@ -130,8 +134,10 @@ def fit_parameters(rates: Union[np.ndarray, List[float]], t: Union[np.ndarray, L
     return zeta
 
 
-def fit_smithwilson_rates(rates_obs: Union[np.ndarray, List[float]], t_obs: Union[np.ndarray, List[float]],
-                          t_target: Union[np.ndarray, List[float]], ufr: float, alpha: Optional[float] = None) -> np.ndarray:
+def fit_smithwilson_rates(rates_obs: Union[np.ndarray, List[float]],
+                          t_obs: Union[np.ndarray, List[float]],
+                          t_target: Union[np.ndarray, List[float]],
+                          ufr: float, alpha: Optional[float] = None) -> np.ndarray:
     """Calculate zero-coupon yields with Smith-Wilson method based on observed rates.
 
     This function expects the rates and initial maturity vector to be
@@ -213,25 +219,29 @@ def fit_convergence_parameter(rates_obs: Union[np.ndarray, List[float]],
 
     # Optimization function calculating the difference between UFR and forward rate at convergence point
     def forward_difference(alpha: float):
-
         # Fit yield curve
-        rates = fit_smithwilson_rates(rates_obs=rates_obs,             # Input rates to be fitted
-                                      t_obs=t_obs,                     # Maturities of these rates
-                                      t_target=[convergence_t, convergence_t + 1],    # Maturity at which curve is supposed to converge to UFR
-                                      alpha=alpha,                     # Optimization parameter
-                                      ufr=ufr)                         # Ultimate forward rate
+        rates = fit_smithwilson_rates(rates_obs=rates_obs,     # Input rates to be fitted
+                                      t_obs=t_obs,             # Maturities of these rates
+                                      t_target=[convergence_t, convergence_t + 1],     # Maturity at which curve is supposed to converge to UFR
+                                      alpha=alpha,             # Optimization parameter
+                                      ufr=ufr)                 # Ultimate forward rate
 
         # Calculate the forward rate at convergence maturity - this is an approximation since
         # according to the documentation the minimization should be based on the forward intensity, not forward rate
-        forward_rate = (1 + rates[1])**(convergence_t + 1)/ (1 + rates[0])**(convergence_t) - 1
+        forward_rate = (1 + rates[1])**(convergence_t + 1) / (1 + rates[0])**(convergence_t) - 1
 
         # Absolute difference needs to be smaller than 1 bps
-        return -abs(forward_rate - ufr) + 1/10000
+        return -abs(forward_rate - ufr) + 1 / 10_000
 
     # Minimize alpha w.r.t. forward difference criterion
-    # root = optimize.bisect(minimize, a=0.05, b=0.5, xtol=0.00001)
-    root = optimize.minimize(lambda alpha: alpha, 0.1, method='SLSQP', bounds=[[0.05, 1.0]],
-                             constraints=[ {'type':'ineq', 'fun': lambda alpha: forward_difference(alpha)}],
-                             options={'ftol': 1e-10, 'disp': True})
+    root = optimize.minimize(lambda alpha: alpha, x0=0.15, method='SLSQP', bounds=[[0.05, 1.0]],
+                             constraints=[{
+                                 'type': 'ineq',
+                                 'fun': forward_difference
+                             }],
+                             options={
+                                 'ftol': 1e-6,
+                                 'disp': True
+                             })
 
     return float(root.x)

@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="smithwilson",
-    version="0.1.0",
+    version="0.2.0",
     author="Dejan Simic",
     # author_email="dejan.simic",
     description=
@@ -23,5 +23,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.7',
-    install_requires=["numpy>=1.21.5"],
+    install_requires=["numpy>=1.21.5", "scipy>=1.7.0"],
 )
