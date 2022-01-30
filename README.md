@@ -4,7 +4,8 @@ This Python package implements the Smith-Wilson yield curve fitting algorithm. I
 <br /><br />
 
 ## How to use the package
-1. To use the Smith-Wilson fitting algorithm, first import the Python package and specify the inputs. In the example below the inputs are zero-coupon rates with annual frequency up until year 25. The UFR is 2.9% and the convergence parameter alpha is 0.128562. The `terms` list defines the list of maturities, in this case `[1.0, 2.0, 3.0, ..., 25.0]`
+1. Install the package with `pip install smithwilson`
+2. To use the Smith-Wilson fitting algorithm, first import the Python package and specify the inputs. In the example below the inputs are zero-coupon rates with annual frequency up until year 25. The UFR is 2.9% and the convergence parameter alpha is 0.128562. The `terms` list defines the list of maturities, in this case `[1.0, 2.0, 3.0, ..., 25.0]`
     ```py
     import smithwilson as sw
 
@@ -22,7 +23,7 @@ This Python package implements the Smith-Wilson yield curve fitting algorithm. I
 
     ```
 
-1. Specify the targeted output maturities. This is the set of terms you want to get rates fitted by Smith-Wilson.
+3. Specify the targeted output maturities. This is the set of terms you want to get rates fitted by Smith-Wilson.
    Expand the set of rates beyond the Last Liquid Point (e.g. extrapolate to 150 years with annual frequency):
    ```py
    # Extrapolate to 150 years
@@ -41,14 +42,17 @@ This Python package implements the Smith-Wilson yield curve fitting algorithm. I
    terms_target = [0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0]
    ```
 
-1. Call the Smiwth-Wilson fitting algorithm. This returns the rates as numpy vector with each element corresponding to the maturity in `terms_target`
+4. Call the Smiwth-Wilson fitting algorithm. This returns the rates as numpy vector with each element corresponding to the maturity in `terms_target`
    ```py
    # Calculate fitted rates based on actual observations and two parametes alpha & UFR
    fitted_rates = sw.fit_smithwilson_rates(rates_obs=rates, t_obs=terms,
-                                           t_target=terms_target, alpha=alpha, ufr=ufr)
+                                           t_target=terms_target, ufr=ufr,
+                                           alpha=alpha)  # Optional
    ```
 
-1. To display the results and/or processing them it can be useful to turn them into a table, here using the pandas library:
+   The convergence parameter alpha is optional and will be estimated if not provided. The parameter determines the convergence speed of the yield curve towards the Ultimate Forward Rate (UFR). The parameter is estimated by finding the smallest value such that the difference between forward rate at convergence maturity and UFR is smaller than 1bps.
+
+5. To display the results and/or processing them it can be useful to turn them into a table, here using the pandas library:
    ```py
    # Ensure pandas package is imported
    import pandas as pd
@@ -102,6 +106,3 @@ In the last case, `t` can be any maturity vector, i.e. with additional maturitie
 
 [EIOPA (2018). Technical documentation of the methodology to derive EIOPA’srisk-free interest rate term structures](https://eiopa.europa.eu/Publications/Standards/Technical%20Documentation%20(31%20Jan%202018).pdf); p.37-46
 <br /><br />
-
-## Author
-[Dejan Simic](https://www.linkedin.com/in/dejsimic/)
