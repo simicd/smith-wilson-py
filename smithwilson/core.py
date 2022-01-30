@@ -1,6 +1,7 @@
 from math import log
 import numpy as np
-from typing import Union, List
+from scipy import optimize
+from typing import Union, List, Optional
 
 
 def calculate_prices(rates: Union[np.ndarray, List[float]], t: Union[np.ndarray, List[float]]) -> np.ndarray:
@@ -49,7 +50,9 @@ def ufr_discount_factor(ufr: float, t: Union[np.ndarray, List[float]]) -> np.nda
     return np.exp(-ufr * t)
 
 
-def wilson_function(t1: Union[np.ndarray, List[float]], t2: Union[np.ndarray, List[float]], alpha: float, ufr: float) -> np.ndarray:
+def wilson_function(t1: Union[np.ndarray, List[float]],
+                    t2: Union[np.ndarray, List[float]],
+                    alpha: float, ufr: float) -> np.ndarray:
     """Calculate matrix of Wilson functions
 
     The Smith-Wilson method requires the calculation of a series of Wilson
@@ -94,7 +97,9 @@ def wilson_function(t1: Union[np.ndarray, List[float]], t2: Union[np.ndarray, Li
     return W
 
 
-def fit_parameters(rates: Union[np.ndarray, List[float]], t: Union[np.ndarray, List[float]], alpha: float, ufr: float) -> np.ndarray:
+def fit_parameters(rates: Union[np.ndarray, List[float]],
+                   t: Union[np.ndarray, List[float]],
+                   alpha: float, ufr: float) -> np.ndarray:
     """Calculate Smith-Wilson parameter vector ζ
 
     Given the Wilson-matrix, vector of discount factors and prices,
@@ -129,8 +134,10 @@ def fit_parameters(rates: Union[np.ndarray, List[float]], t: Union[np.ndarray, L
     return zeta
 
 
-def fit_smithwilson_rates(rates_obs: Union[np.ndarray, List[float]], t_obs: Union[np.ndarray, List[float]],
-                          t_target: Union[np.ndarray, List[float]], alpha: float, ufr: float) -> np.ndarray:
+def fit_smithwilson_rates(rates_obs: Union[np.ndarray, List[float]],
+                          t_obs: Union[np.ndarray, List[float]],
+                          t_target: Union[np.ndarray, List[float]],
+                          ufr: float, alpha: Optional[float] = None) -> np.ndarray:
     """Calculate zero-coupon yields with Smith-Wilson method based on observed rates.
 
     This function expects the rates and initial maturity vector to be
@@ -159,8 +166,9 @@ def fit_smithwilson_rates(rates_obs: Union[np.ndarray, List[float]], t_obs: Unio
         rates_obs: Initially observed zero-coupon rates vector before LLP of length n
         t_obs: Initially observed time to maturity vector (in years) of length n
         t_target: New targeted maturity vector (in years) with interpolated/extrapolated terms
-        alpha: Convergence speed parameter
         ufr: Ultimate Forward Rate (annualized/annual compounding)
+        alpha: (optional) Convergence speed parameter. If not provided estimated using
+            the `fit_convergence_parameter()` function
 
     Returns:
         Vector of zero-coupon rates with Smith-Wilson interpolated or extrapolated rates
@@ -173,6 +181,9 @@ def fit_smithwilson_rates(rates_obs: Union[np.ndarray, List[float]], t_obs: Unio
     t_obs = np.array(t_obs).reshape((-1, 1))
     t_target = np.array(t_target).reshape((-1, 1))
 
+    if alpha is None:
+        alpha = fit_convergence_parameter(rates_obs=rates_obs, t_obs=t_obs, ufr=ufr)
+
     zeta = fit_parameters(rates=rates_obs, t=t_obs, alpha=alpha, ufr=ufr)
     ufr_disc = ufr_discount_factor(ufr=ufr, t=t_target)
     W = wilson_function(t1=t_target, t2=t_obs, alpha=alpha, ufr=ufr)
@@ -183,3 +194,54 @@ def fit_smithwilson_rates(rates_obs: Union[np.ndarray, List[float]], t_obs: Unio
 
     # Transform price vector to zero-coupon rate vector (1/P)^(1/t) - 1
     return np.power(1 / P, 1 / t_target) - 1
+
+
+def fit_convergence_parameter(rates_obs: Union[np.ndarray, List[float]],
+                              t_obs: Union[np.ndarray, List[float]],
+                              ufr: float) -> float:
+    """Fit Smith-Wilson convergence factor (alpha).
+
+    Args:
+        rates_obs: Initially observed zero-coupon rates vector before LLP of length n
+        t_obs: Initially observed time to maturity vector (in years) of length n
+        ufr: Ultimate Forward Rate (annualized/annual compounding)
+
+    Returns:
+        Convergence parameter alpha
+    """
+
+    # Last liquid point (LLP)
+    llp = np.max(t_obs)
+
+    # Maturity at which forward curve is supposed to converge to ultimate forward rate (UFR)
+    # See: https://www.eiopa.europa.eu/sites/default/files/risk_free_interest_rate/12092019-technical_documentation.pdf (chapter 7.D., p. 39)
+    convergence_t = max(llp + 40, 60)
+
+    # Optimization function calculating the difference between UFR and forward rate at convergence point
+    def forward_difference(alpha: float):
+        # Fit yield curve
+        rates = fit_smithwilson_rates(rates_obs=rates_obs,     # Input rates to be fitted
+                                      t_obs=t_obs,             # Maturities of these rates
+                                      t_target=[convergence_t, convergence_t + 1],     # Maturity at which curve is supposed to converge to UFR
+                                      alpha=alpha,             # Optimization parameter
+                                      ufr=ufr)                 # Ultimate forward rate
+
+        # Calculate the forward rate at convergence maturity - this is an approximation since
+        # according to the documentation the minimization should be based on the forward intensity, not forward rate
+        forward_rate = (1 + rates[1])**(convergence_t + 1) / (1 + rates[0])**(convergence_t) - 1
+
+        # Absolute difference needs to be smaller than 1 bps
+        return -abs(forward_rate - ufr) + 1 / 10_000
+
+    # Minimize alpha w.r.t. forward difference criterion
+    root = optimize.minimize(lambda alpha: alpha, x0=0.15, method='SLSQP', bounds=[[0.05, 1.0]],
+                             constraints=[{
+                                 'type': 'ineq',
+                                 'fun': forward_difference
+                             }],
+                             options={
+                                 'ftol': 1e-6,
+                                 'disp': True
+                             })
+
+    return float(root.x)
